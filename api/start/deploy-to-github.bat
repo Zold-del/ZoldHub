@@ -7,8 +7,18 @@ git add api
 git status
 
 echo.
-echo Pour déployer, exécutez les commandes suivantes:
-echo git commit -m "Update API"
-echo git push origin main
+echo Préparation du commit et du push...
+set /p commit_message=Entrez un message de commit (ou appuyez sur Entrée pour "Update API"): 
+if "%commit_message%"=="" set commit_message=Update API
+
+git commit -m "%commit_message%"
+git push origin main
+
+echo.
+echo Déploiement initié! Les actions GitHub vont maintenant construire et publier votre image Docker.
+echo Vous pouvez suivre la progression sur la page Actions de votre dépôt GitHub.
 echo.
 echo Note: Assurez-vous que MONGODB_URI et JWT_SECRET sont configurés dans les secrets GitHub!
+echo.
+echo Appuyez sur une touche pour quitter...
+pause > nul

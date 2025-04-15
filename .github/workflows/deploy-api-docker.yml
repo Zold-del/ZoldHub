@@ -6,6 +6,11 @@ on:
     paths:
       - 'api/**'  # Déclencher uniquement lors des modifications dans le dossier api
 
+# Add permissions to allow package creation
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
