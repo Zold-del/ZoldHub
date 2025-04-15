@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const userSchema = mongoose.Schema({
   name: {
@@ -43,5 +44,29 @@ const userSchema = mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Middleware de pré-sauvegarde pour hacher le mot de passe
+userSchema.pre('save', async function(next) {
+  // Ne pas hacher à nouveau si le mot de passe n'a pas été modifié
+  if (!this.isModified('password')) {
+    return next();
+  }
+  
+  try {
+    // Générer un sel
+    const salt = await bcrypt.genSalt(10);
+    
+    // Hacher le mot de passe avec le sel
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Méthode pour comparer les mots de passe
+userSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
 
 module.exports = mongoose.model('User', userSchema);

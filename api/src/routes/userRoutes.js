@@ -14,22 +14,29 @@ const {
   getFriends, 
   getFriendRequests 
 } = require('../controllers/userController');
+const { protect, authorize } = require('../middlewares/authMiddleware');
 
-// Routes d'authentification
+// Routes publiques d'authentification
 router.post('/register', registerUser);
 router.post('/login', loginUser);
-router.get('/profile', getUserProfile);
 
-// Routes standard CRUD pour les utilisateurs
-router.route('/').get(getUsers).post(createUser);
-router.route('/:id').get(getUserById);
+// Routes privées - nécessitent une authentification
+router.get('/profile', protect, getUserProfile);
 
-// Routes pour le système d'amis
-router.post('/:id/friend-request', sendFriendRequest);
-router.put('/friend-request/:requestId/accept', acceptFriendRequest);
-router.put('/friend-request/:requestId/reject', rejectFriendRequest);
-router.delete('/friends/:friendId', removeFriend);
-router.get('/friends', getFriends);
-router.get('/friend-requests', getFriendRequests);
+// Routes CRUD pour les utilisateurs - sécurisées par rôle
+router.route('/')
+  .get(protect, authorize('admin'), getUsers)
+  .post(protect, authorize('admin'), createUser);
+  
+router.route('/:id')
+  .get(protect, getUserById);
+
+// Routes pour le système d'amis - toutes privées
+router.post('/:id/friend-request', protect, sendFriendRequest);
+router.put('/friend-request/:requestId/accept', protect, acceptFriendRequest);
+router.put('/friend-request/:requestId/reject', protect, rejectFriendRequest);
+router.delete('/friends/:friendId', protect, removeFriend);
+router.get('/friends', protect, getFriends);
+router.get('/friend-requests', protect, getFriendRequests);
 
 module.exports = router;

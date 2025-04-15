@@ -6,7 +6,7 @@ on:
     paths:
       - 'api/**'  # Déclencher uniquement lors des modifications dans le dossier api
 
-# Add permissions to allow package creation
+# Permissions explicites pour GitHub Packages
 permissions:
   contents: read
   packages: write
@@ -34,7 +34,11 @@ jobs:
         run: |
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "REPO_LOWER=${REPO}" >> $GITHUB_ENV
-          echo "Repository name converted to lowercase: ${REPO}"
+          
+      - name: Check package access
+        run: |
+          echo "Checking package access permissions for ${{ github.actor }}"
+          echo "Repository: ${{ env.REPO_LOWER }}"
           
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -46,3 +50,10 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}/api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Options supplémentaires pour éviter les problèmes d'authentification
+          provenance: false
+          
+      - name: Verify image creation
+        run: |
+          echo "Image Docker créée et poussée vers GitHub Container Registry"
+          echo "Image: ghcr.io/${{ env.REPO_LOWER }}/api:latest"

@@ -7,8 +7,13 @@ const maxRetries = 5;
 // Fonction pour connecter à MongoDB
 const connectDB = async () => {
   try {
-    // Configuration de la connexion à MongoDB Atlas avec vos identifiants
-    const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://Anthony:2EiwRXOGFEbGHWLJ@cluster0.m0dfgom.mongodb.net/zoldstudio?retryWrites=true&w=majority';
+    // Configuration de la connexion à MongoDB Atlas avec variables d'environnement uniquement
+    const mongoURI = process.env.MONGODB_URI;
+    
+    if (!mongoURI) {
+      console.error('MONGODB_URI non défini dans les variables d\'environnement');
+      return false;
+    }
     
     console.log('Tentative de connexion à MongoDB...');
     

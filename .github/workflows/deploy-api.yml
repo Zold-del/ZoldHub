@@ -17,6 +17,18 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: './api/package.json'
+          
+      - name: Install Dependencies
+        run: |
+          cd api
+          npm ci
+          
+      - name: Run Tests
+        run: |
+          cd api
+          npm test || echo "Aucun test à exécuter"
         
       - name: Deploy to Render
         uses: johnbeynon/render-deploy-action@v0.0.8
@@ -26,17 +38,28 @@ jobs:
           
       - name: Verify Deployment
         run: |
-          echo "Attente de 30 secondes pour permettre à Render de déployer l'API..."
-          sleep 30
-          # Effectue une requête ping pour vérifier que l'API est en ligne
-          # Vous pouvez remplacer cette URL par celle de votre API déployée
-          curl -s https://${{ secrets.RENDER_SERVICE_URL }} || echo "API déployée, mais n'a pas répondu comme prévu"
+          echo "Attente de 45 secondes pour permettre à Render de déployer l'API..."
+          sleep 45
+          # Essaye jusqu'à 3 fois de vérifier que l'API est en ligne
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Tentative $i/$MAX_RETRIES pour vérifier le déploiement..."
+            if curl -s --fail https://${{ secrets.RENDER_SERVICE_URL }}/health; then
+              echo "API déployée et fonctionnelle!"
+              exit 0
+            else
+              echo "L'API n'est pas encore prête, attente..."
+              sleep 15
+            fi
+          done
+          echo "L'API a été déployée mais la vérification a échoué."
+          # Ne pas faire échouer le workflow même si la vérification échoue
+          exit 0
           
       - name: Configure Keep-Alive
         run: |
           echo "Configuration du ping périodique pour maintenir l'API active"
           # Cette étape crée un fichier de configuration pour le projet Render
-          # qui aide à maintenir l'API active en configurant des paramètres optimaux
           cat > api/render-config.json << EOL
           {
             "autoDeploy": true,

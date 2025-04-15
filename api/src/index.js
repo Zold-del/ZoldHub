@@ -4,6 +4,11 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 
+/**
+ * Configuration optimisée pour GitHub CI/CD
+ * Dernière mise à jour: 16/04/2025
+ */
+
 // Configuration
 dotenv.config();
 
