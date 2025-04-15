@@ -5,9 +5,16 @@
 
 // Détection automatique de l'environnement pour choisir la bonne URL
 const getApiBaseUrl = () => {
-  // Si on est sur un serveur local (IP ou localhost)
+  // Détection de l'environnement
   const hostname = window.location.hostname;
-  // Par défaut, on utilise le port 5000 pour l'API
+  
+  // Si nous sommes sur GitHub Pages
+  if (hostname === 'zold-del.github.io') {
+    // API déployée sur render.com (service gratuit pour héberger des API)
+    return 'https://zoldstudio-api.onrender.com';
+  }
+  
+  // Si on est sur un serveur local (IP ou localhost)
   return `http://${hostname}:5000`;
 };
 
