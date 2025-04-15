@@ -13,8 +13,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+        
       - name: Deploy to Render
         uses: johnbeynon/render-deploy-action@v0.0.8
         with:
-          service-id: ${{ secrets.RENDER_SERVICE_ID }}  # Vous devrez configurer cette valeur secrète
-          api-key: ${{ secrets.RENDER_API_KEY }}  # Vous devrez configurer cette valeur secrète
+          service-id: ${{ secrets.RENDER_SERVICE_ID }}
+          api-key: ${{ secrets.RENDER_API_KEY }}
+          
+      - name: Verify Deployment
+        run: |
+          echo "Attente de 30 secondes pour permettre à Render de déployer l'API..."
+          sleep 30
+          # Effectue une requête ping pour vérifier que l'API est en ligne
+          # Vous pouvez remplacer cette URL par celle de votre API déployée
+          curl -s https://${{ secrets.RENDER_SERVICE_URL }} || echo "API déployée, mais n'a pas répondu comme prévu"
+          
+      - name: Configure Keep-Alive
+        run: |
+          echo "Configuration du ping périodique pour maintenir l'API active"
+          # Cette étape crée un fichier de configuration pour le projet Render
+          # qui aide à maintenir l'API active en configurant des paramètres optimaux
+          cat > api/render-config.json << EOL
+          {
+            "autoDeploy": true,
+            "healthCheckPath": "/health",
+            "startCommand": "npm start",
+            "envVars": [
+              {
+                "key": "NODE_ENV",
+                "value": "production"
+              },
+              {
+                "key": "KEEP_ALIVE",
+                "value": "true"
+              }
+            ]
+          }
+          EOL

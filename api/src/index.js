@@ -19,8 +19,30 @@ app.use(cors({
 }));
 
 // Middleware
-app.use(express.json()); // Pour parser les requêtes JSON
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Pour parser les requêtes JSON avec une limite de taille
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Middleware pour les timeouts des requêtes
+app.use((req, res, next) => {
+  // Définir un timeout pour chaque requête (30 secondes)
+  req.setTimeout(30000, () => {
+    console.log('Requête timeout après 30s:', req.url);
+    res.status(408).json({ message: 'Timeout de la requête', status: 'error' });
+  });
+  next();
+});
+
+// Gestion des erreurs non capturées dans les promesses
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promesse non gérée rejetée:', reason);
+  // Ne pas planter le serveur, juste logger l'erreur
+});
+
+// Gestion des erreurs non capturées
+process.on('uncaughtException', (error) => {
+  console.error('Erreur non capturée:', error);
+  // Ne pas planter le serveur, juste logger l'erreur
+});
 
 // Routes
 app.get('/', (req, res) => {
@@ -32,9 +54,66 @@ app.get('/test', (req, res) => {
   res.json({ message: "L'API fonctionne correctement!", status: "online" });
 });
 
+// Point de terminaison pour les vérifications de santé
+app.get('/health', (req, res) => {
+  // Vérifier la connexion à la base de données
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    database: dbStatus,
+    memory: process.memoryUsage(),
+  });
+});
+
+// Route pour redémarrer la connexion à MongoDB manuellement
+app.post('/api/admin/restart-db', async (req, res) => {
+  try {
+    console.log('Tentative de redémarrage de la connexion MongoDB');
+    
+    // Fermer la connexion existante si elle existe
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+      console.log('Connexion MongoDB fermée');
+    }
+    
+    // Reconnecter
+    const connectDB = require('./config/db');
+    const connected = await connectDB();
+    
+    res.json({
+      success: connected,
+      message: connected ? 'Connexion MongoDB redémarrée avec succès' : 'Échec du redémarrage de la connexion MongoDB',
+    });
+  } catch (error) {
+    console.error('Erreur lors du redémarrage de MongoDB:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur lors du redémarrage de MongoDB', 
+      error: error.message 
+    });
+  }
+});
+
 // Importer les routes
 app.use('/api/users', require('./routes/userRoutes'));
 // app.use('/api/products', require('./routes/productRoutes'));
+
+// Middleware pour gérer les erreurs 404
+app.use((req, res) => {
+  res.status(404).json({ message: "Cette route n'existe pas", status: "error" });
+});
+
+// Middleware pour la gestion globale des erreurs
+app.use((err, req, res, next) => {
+  console.error(`Erreur API: ${err.stack}`);
+  res.status(err.status || 500).json({
+    message: err.message || "Une erreur interne s'est produite",
+    status: "error"
+  });
+});
 
 // Fonction pour démarrer le serveur avec la gestion d'erreurs de port
 const startServer = (port) => {
@@ -51,6 +130,22 @@ const startServer = (port) => {
       console.error('Erreur lors du démarrage du serveur:', err);
     }
   });
+
+  // Configuration des timeouts du serveur
+  server.timeout = 60000; // 60 secondes
+  server.keepAliveTimeout = 65000; // Un peu plus que timeout
+  
+  // Vérification de l'état du serveur toutes les 5 minutes
+  setInterval(() => {
+    console.log(`État du serveur: En cours d'exécution depuis ${Math.floor(process.uptime())} secondes`);
+    
+    // Vérifier la connexion MongoDB
+    if (mongoose.connection.readyState !== 1) {
+      console.log('MongoDB déconnecté, tentative de reconnexion automatique...');
+      const connectDB = require('./config/db');
+      connectDB().catch(err => console.error('Échec de la reconnexion MongoDB:', err));
+    }
+  }, 300000); // 5 minutes
   
   return server;
 };
