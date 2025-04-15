@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: zoldstudio-api
+    env: node
+    buildCommand: cd api && npm install
+    startCommand: cd api && npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        fromDatabase:
+          name: zoldstudio-mongodb
+          property: connectionString
+
+databases:
+  - name: zoldstudio-mongodb
+    databaseName: zoldstudio
+    ipAllowList: [] # Permet l'accès depuis n'importe où
